@@ -1,0 +1,208 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+
+{% block extrastyle %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<style>
+  .dashboard-metric h2 {
+    font-size: 2.5rem;
+    font-weight: bold;
+  }
+  .dashboard-metric .card {
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+    height: 100%;
+  }
+  .dashboard-metric .card:hover {
+    transform: scale(1.02);
+  }
+  .dashboard-section .card-header {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+  .list-group-item {
+    font-size: 0.95rem;
+  }
+  .badge {
+    font-size: 0.85rem;
+  }
+  .shortcut-links {
+    margin: 2rem 0;
+    text-align: center;
+  }
+  .shortcut-links a {
+    margin: 0 10px;
+  }
+  .card-equal-height {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .cliente-nombre {
+    font-size: 0.85rem;
+    color: #6c757d;
+  }
+
+  /* Colores personalizados estilo semáforo */
+  .bg-orange { background-color: #fd7e14 !important; color: white; }
+  .bg-warning-light { background-color: #ffeeba !important; color: #856404; }
+  .bg-blue-light { background-color: #cce5ff !important; color: #004085; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <h2 class="mb-4 text-center">📊 Dashboard - COMPUSERV</h2>
+
+  <!-- Métricas principales -->
+  <div class="row dashboard-metric mb-5 text-center">
+    <div class="col-md-4">
+      <div class="card border-0 bg-light card-equal-height">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-tools text-warning"></i> Servicios activos</h5>
+          <h2>{{ servicios_activos.count }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 bg-light card-equal-height">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-cash-register text-success"></i> Ventas hoy</h5>
+          <h2>${{ total_ventas_hoy }}</h2>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-4">
+      <div class="card border-0 bg-light card-equal-height">
+        <div class="card-body">
+          <h5 class="card-title"><i class="fas fa-box-open text-danger"></i> Bajo stock</h5>
+          <h2>{{ productos_bajo_stock.count }}</h2>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Atajos -->
+  <div class="shortcut-links">
+    <a href="/admin/servicios/servicio/" class="btn btn-outline-warning"><i class="fas fa-tools"></i> Servicios</a>
+    <a href="/admin/ventas/venta/" class="btn btn-outline-success"><i class="fas fa-cash-register"></i> Ventas</a>
+    <a href="/admin/inventario/producto/" class="btn btn-outline-danger"><i class="fas fa-boxes"></i> Inventario</a>
+  </div>
+
+  <!-- Resumen por estado de servicio -->
+  <div class="row dashboard-section mt-4">
+    <div class="col-md-12">
+      <div class="card border-info mb-4">
+        <div class="card-header bg-info text-white"><i class="fas fa-layer-group"></i> Resumen de estados de servicio</div>
+        <div class="card-body">
+          <div class="row text-center">
+            {% for estado in estados_resumen %}
+            <div class="col-md-2 mb-2">
+              <div class="badge {{ estado.color }} p-2 w-100">{{ estado.nombre }}: {{ estado.total }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detalles -->
+  <div class="row dashboard-section mt-3">
+    <div class="col-md-6 mb-4">
+      <div class="card border-warning h-100">
+        <div class="card-header bg-warning text-white">Servicios activos</div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for s in servicios_activos %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ s.codigo }}</strong><br>
+                <span class="cliente-nombre">{{ s.cliente.nombre }}</span>
+              </div>
+              <span class="badge 
+                {% if s.estado == 'recibido' %}bg-danger
+                {% elif s.estado == 'diagnosticado' %}bg-orange
+                {% elif s.estado == 'presupuestado' or s.estado == 'cotizado' %}bg-warning
+                {% elif s.estado == 'en_reparacion' or s.estado == 'pendiente_instalacion' %}bg-info
+                {% elif s.estado == 'listo_para_entregar' or s.estado == 'instalado' %}bg-success
+                {% elif s.estado == 'entregado' %}bg-secondary
+                {% else %}bg-light
+                {% endif %}">
+                {{ s.get_estado_display }}
+              </span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+      <div class="card border-success mb-3">
+        <div class="card-header bg-success text-white">Ventas de hoy</div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for v in ventas_recientes %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ v.codigo_factura }}
+              <span class="badge bg-dark">${{ v.total }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <div class="card border-danger">
+        <div class="card-header bg-danger text-white">Productos con bajo stock</div>
+        <div class="card-body">
+          <ul class="list-group">
+            {% for p in productos_bajo_stock %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ p.nombre }}
+              <span class="badge bg-danger">{{ p.stock }}</span>
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráfico -->
+  <div class="row mt-5">
+    <div class="col-md-12">
+      <div class="card">
+        <div class="card-header bg-primary text-white">📈 Ventas semanales</div>
+        <div class="card-body">
+          <canvas id="ventasChart" height="100"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('ventasChart').getContext('2d');
+  const ventasChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: {{ labels|safe }},
+      datasets: [{
+        label: 'Ventas',
+        data: {{ datos|safe }},
+        backgroundColor: '#007bff'
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true } }
+    }
+  });
+</script>
+{% endblock %}

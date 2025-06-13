@@ -1,0 +1,26 @@
+# Entorno virtual
+venv/
+env/
+.env
+
+# Archivos compilados de Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Archivos de base de datos local
+*.sqlite3
+
+# Configuración del editor
+.vscode/
+.idea/
+
+# Archivos temporales y logs
+*.log
+*.pid
+
+# Archivos de compilación
+*.egg-info/
+
+# Archivos de Docker
+*.pid.lock
