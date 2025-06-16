@@ -13,7 +13,10 @@ LOGO_PATH = os.path.join(settings.MEDIA_ROOT, 'img', 'logo.png')
 
 # ✅ QR para el CLIENTE (número del local)
 def generar_qr_local(servicio):
-    mensaje = f"Hola sobre el servicio {servicio.codigo}"
+    mensaje = (
+        f"Hola, soy {servicio.cliente.nombre}. "
+        f"Quisiera saber el estado del servicio {servicio.codigo} que dejé en COMPUSERV."
+    )
     link = f"https://wa.me/5930962735727?text={mensaje.replace(' ', '%20')}"
     qr = qrcode.make(link)
     buffer = BytesIO()
@@ -22,16 +25,27 @@ def generar_qr_local(servicio):
     return Image.open(buffer)
 
 
+
 # ✅ QR para el LOCAL (número del cliente)
 def generar_qr_cliente(servicio):
     telefono = servicio.cliente.telefono.replace(" ", "").strip()
-    mensaje = f"Hola sobre el servicio {servicio.codigo}"
+    estado_mensaje = (
+        "Su equipo está listo para ser retirado."
+        if servicio.estado == "listo_para_entregar" else
+        "Le compartimos información del proceso de reparación."
+    )
+    mensaje = (
+        f"Hola {servicio.cliente.nombre}, le saludamos de COMPUSERV. "
+        f"Nos comunicamos respecto al servicio {servicio.codigo}. "
+        f"{estado_mensaje}"
+    )
     link = f"https://wa.me/593{telefono}?text={mensaje.replace(' ', '%20')}"
     qr = qrcode.make(link)
     buffer = BytesIO()
     qr.save(buffer, format="PNG")
     buffer.seek(0)
     return Image.open(buffer)
+
 
 
 def _dibuja_comprobante_cliente(c, servicio, y_offset):
@@ -63,12 +77,11 @@ def _dibuja_comprobante_cliente(c, servicio, y_offset):
         ("Cliente:", servicio.cliente.nombre),
         ("Teléfono:", servicio.cliente.telefono or "N/A"),
         ("Descripción:", servicio.descripcion),
-        ("Estado:", servicio.estado),
         ("Accesorios:", servicio.accesorios),
         ("Observaciones:", servicio.observaciones),
     ]
     if servicio.fecha_entrega:
-        labels.append(("Fecha de entrega:", servicio.fecha_entrega.strftime('%d/%m/%Y')))
+        labels.append(("Fecha de recepción:", servicio.fecha_entrega.strftime('%d/%m/%Y')))
 
     for i, (label, value) in enumerate(labels):
         y = y_offset + 185 - (i * 15)
@@ -100,13 +113,14 @@ def _dibuja_comprobante_cliente(c, servicio, y_offset):
     c.drawString(margen_x, base_responsabilidad, "Responsabilidad del cliente:")
     c.setFont("Helvetica", 9)
     texto = [
-        "El cliente reconoce que ha entregado el equipo con los accesorios declarados.",
-        "Se compromete a revisar el estado del equipo al momento de la entrega.",
-        "COMPUSERV no se hace responsable por reclamos posteriores relacionados a daños físicos,",
-        "humedad, software malicioso, o pérdida de accesorios no registrados."
+        "El cliente declara haber entregado el equipo con los accesorios indicados y acepta las condiciones del servicio.",
+        "Es su responsabilidad contar con respaldo de su información, ya que no se garantiza la integridad de datos o software.",
+        "COMPUSERV no se hace responsable por pérdida de información, configuraciones, virus o daños no reportados al ingreso.",
+        "El servicio no incluye garantía sobre el software instalado ni reclamos posteriores a la entrega del equipo reparado."
     ]
     for i, linea in enumerate(texto):
         c.drawString(margen_x + 10, base_responsabilidad - 15 - (i * 12), linea)
+
 
     firma_y = y_offset - 5
     c.setStrokeColor(colors.black)
@@ -123,7 +137,7 @@ def _dibuja_comprobante_cliente(c, servicio, y_offset):
 
 
 def _dibuja_comprobante_interno(c, servicio, y_offset):
-    margen_x = 180  # centrado en A4
+    margen_x = 40  # centrado en A4
     ancho_comprobante = 230
     altura_total = 300
 
@@ -174,6 +188,29 @@ def _dibuja_comprobante_interno(c, servicio, y_offset):
     except Exception as e:
         print(f"Advertencia: No se pudo eliminar QR interno: {e}")
 
+def _dibuja_comprobante_accesorios(c, servicio, y_offset):
+    margen_x = 310  # Posición a la derecha de la copia interna
+    ancho = 230
+    alto = 130
+    c.setStrokeColor(colors.lightgrey)
+    c.rect(margen_x, y_offset - 20, ancho, alto, stroke=1, fill=0)
+
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(margen_x + ancho / 2, y_offset + 90, "Etiqueta Accesorios")
+
+    campos = [
+        ("Cliente", servicio.cliente.nombre),
+        ("Teléfono", servicio.cliente.telefono or "N/A"),
+        ("Código", servicio.codigo),
+        ("Accesorios", servicio.accesorios),
+    ]
+    current_y = y_offset + 75
+    for label, valor in campos:
+        c.setFont("Helvetica", 9)
+        c.drawString(margen_x + 10, current_y, f"{label}:")
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(margen_x + 80, current_y, str(valor))
+        current_y -= 15
 
 
 def generar_comprobante_pdf(servicio):
@@ -183,12 +220,17 @@ def generar_comprobante_pdf(servicio):
 
     c = canvas.Canvas(ruta, pagesize=A4)
 
+    # Parte superior: comprobante para el cliente
     _dibuja_comprobante_cliente(c, servicio, y_offset=445)
-    _dibuja_comprobante_interno(c, servicio, y_offset=55)
+
+    # Parte inferior - Segunda copia (más abajo)
+    _dibuja_comprobante_interno(c, servicio, y_offset=80)
+    _dibuja_comprobante_accesorios(c, servicio, y_offset=80)
 
     c.save()
     servicio.ruta_comprobante.name = f"comprobantes/{filename}"
     servicio.save()
+
 
 
 def generar_factura_pdf(factura):
