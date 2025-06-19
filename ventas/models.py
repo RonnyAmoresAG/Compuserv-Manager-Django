@@ -5,7 +5,7 @@ from inventario.models import Producto
 from facturacion.models import Factura
 from facturacion.utils import generar_codigo_factura
 from facturacion.pdf_utils import generar_factura_pdf
-
+from django.utils import timezone
 
 class Venta(models.Model):
     FORMAS_PAGO = [
@@ -32,6 +32,9 @@ class Venta(models.Model):
 
         if not self.cliente:
             self.cliente = Cliente.objects.get_or_create(nombre="Consumidor Final")[0]
+        
+        if not self.fecha:
+            self.fecha = timezone.now().date()
 
         super().save(*args, **kwargs)
 

@@ -31,7 +31,7 @@ class Servicio(models.Model):
     accesorios = models.TextField(blank=True)
     observaciones = models.TextField(blank=True)
     estado = models.CharField(max_length=30, choices=ESTADO_CHOICES, default='recibido')
-    fecha_ingreso = models.DateTimeField(auto_now_add=True)
+    fecha_ingreso = models.DateField(auto_now_add=True)
     fecha_entrega = models.DateField(null=True, blank=True)
     costo_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     ruta_comprobante = models.FileField(upload_to='comprobantes/', null=True, blank=True)

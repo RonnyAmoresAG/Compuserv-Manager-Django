@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from django.utils.timezone import now, timedelta
+from django.utils.timezone import localtime, timedelta
 from servicios.models import Servicio
 from ventas.models import Venta
 from inventario.models import Producto
@@ -18,23 +18,26 @@ def format_money(valor):
     return f"{valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
 def dashboard_view(request):
-    hoy = now().date()
+    hoy = localtime().date()
     semana_inicio = hoy - timedelta(days=hoy.weekday())
+    mes_actual = hoy.strftime('%B').capitalize()
 
+    # Servicios activos y entregados esta semana
     servicios_activos = Servicio.objects.exclude(estado='entregado')
     servicios_entregados = Servicio.objects.filter(
         estado='entregado',
         fecha_entrega__gte=semana_inicio
     )
-    ventas_recientes = Venta.objects.filter(fecha=hoy)
-    productos_bajo_stock = Producto.objects.filter(stock__lte=3)
 
-    total_ventas_hoy = sum(v.total for v in ventas_recientes)
-    total_ingresos_servicios = sum(s.costo_total for s in servicios_entregados if s.costo_total)
+    # Ventas del mes
+    ventas_mes = Venta.objects.filter(
+        fecha__month=hoy.month,
+        fecha__year=hoy.year
+    )
+    total_ventas_mes = sum(v.total for v in ventas_mes)
 
-    # Ingresos del mes actual
-    mes_actual = hoy.strftime('%B').capitalize()
-    ingresos_mes = sum(
+    # Ingresos por servicios del mes (entregados o instalados)
+    ingresos_mes_servicios = sum(
         s.costo_total for s in Servicio.objects.filter(
             estado__in=['entregado', 'instalado'],
             fecha_entrega__month=hoy.month,
@@ -42,6 +45,18 @@ def dashboard_view(request):
         ) if s.costo_total
     )
 
+    # Ingresos totales = ventas + servicios
+    ingresos_totales_mes = total_ventas_mes + ingresos_mes_servicios
+
+    # Ingresos de servicios de la semana
+    total_ingresos_servicios = sum(
+        s.costo_total for s in servicios_entregados if s.costo_total
+    )
+
+    # Productos con bajo stock
+    productos_bajo_stock = Producto.objects.filter(stock__lte=3)
+
+    # Resumen por estado
     estado_colores = {
         'recibido': 'bg-danger',
         'diagnosticado': 'bg-orange',
@@ -66,11 +81,12 @@ def dashboard_view(request):
     return render(request, 'dashboard/dashboard.html', {
         'servicios_activos': servicios_activos,
         'servicios_entregados': servicios_entregados,
-        'ventas_recientes': ventas_recientes,
+        'ventas_mes': ventas_mes,
         'productos_bajo_stock': productos_bajo_stock,
-        'total_ventas_hoy': format_money(total_ventas_hoy),
+        'total_ventas_mes': format_money(total_ventas_mes),
         'total_ingresos_servicios': format_money(total_ingresos_servicios),
-        'ingresos_mes': format_money(ingresos_mes),
+        'ingresos_mes': format_money(ingresos_mes_servicios),
+        'ingresos_totales_mes': format_money(ingresos_totales_mes),
         'mes_actual': mes_actual,
         'estados_resumen': estados_resumen,
     })

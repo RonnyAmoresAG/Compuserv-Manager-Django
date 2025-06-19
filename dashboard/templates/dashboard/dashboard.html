@@ -68,8 +68,8 @@
   <div class="col-md-3">
     <div class="card border-0 bg-light card-equal-height">
       <div class="card-body">
-        <h5 class="card-title"><i class="fas fa-cash-register text-success"></i> Ventas hoy</h5>
-        <h2><span style="white-space: nowrap;">$ {{ total_ventas_hoy }}</span></h2>
+        <h5 class="card-title"><i class="fas fa-cash-register text-success"></i> Ventas {{ mes_actual }}</h5>
+        <h2><span style="white-space: nowrap;">$ {{ total_ventas_mes }}</span></h2>
       </div>
     </div>
   </div>
@@ -85,7 +85,7 @@
     <div class="card border-0 bg-light card-equal-height">
       <div class="card-body">
         <h5 class="card-title"><i class="fas fa-calendar-alt text-info"></i> Ingresos {{ mes_actual }}</h5>
-        <h2><span style="white-space: nowrap;">$ {{ ingresos_mes }}</span></h2>
+        <h2><span style="white-space: nowrap;">$ {{ ingresos_totales_mes  }}</span></h2>
       </div>
     </div>
   </div>
@@ -150,10 +150,10 @@
 
     <div class="col-md-6 mb-4">
       <div class="card border-success mb-3">
-        <div class="card-header bg-success text-white">Ventas de hoy</div>
+        <div class="card-header bg-success text-white">Ventas del mes</div>
         <div class="card-body">
           <ul class="list-group">
-            {% for v in ventas_recientes %}
+            {% for v in ventas_mes %}
             <li class="list-group-item d-flex justify-content-between align-items-center">
               {{ v.codigo_factura }}
               <span class="badge bg-dark">${{ v.total }}</span>
