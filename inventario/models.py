@@ -13,6 +13,7 @@ class Producto(models.Model):
         ('producto', 'Producto'),
         ('repuesto', 'Repuesto'),
         ('accesorio', 'Accesorio'),
+        ('usado', 'Producto Usado'),
     ]
 
     nombre = models.CharField(max_length=100)
